@@ -14,38 +14,54 @@ print("========== Preprocess Start ==========")
 tasharep = pd.read_csv('./Data/UTF-8/tasharep.csv') # training data
 taetfp = pd.read_csv('./Data/UTF-8/taetfp.csv') # training data
 
+member_data = pd.read_csv('./Data/0050_ratio.csv') 
+member_ID = member_data["ID"].astype(str)
+
 print('original tasharep: ',tasharep.shape)
 print('original taetfp: ',taetfp.shape)
+
+tasharep.ID = tasharep.ID.astype(str)
+tasharep.Date = tasharep.Date.astype(str)
+taetfp.ID = taetfp.ID.astype(str)
+taetfp.Date = taetfp.Date.astype(str)
 
 tasharep_ID = tasharep.ID.unique()
 taetfp_ID = taetfp.ID.unique()
 
 Date = tasharep.Date.unique()
 
-tasharep_date_group = tasharep.groupby("Date")
-taetfp_date_group = taetfp.groupby("Date")
+tasharep_ID_group = tasharep.groupby("ID")
+taetfp_ID_group = taetfp.groupby("ID")
 
 all_data_dict = {}
 
-for date_idx in range(len(Date)):
-    idx = tasharep_date_group.groups[Date[date_idx]]
+for ID_idx in range(len(tasharep_ID)):
+    idx = tasharep_ID_group.groups[tasharep_ID[ID_idx]]
 
-    valid_data = tasharep.ix[idx]
+    curr_ID_data = tasharep.iloc[idx]
+    curr_ID_data.index = curr_ID_data.Date
     
-    curr_data = pd.DataFrame(columns=["ID"])
-    curr_data["ID"] = tasharep_ID
+    all_data_dict[tasharep_ID[ID_idx]] = curr_ID_data
 
-    curr_data = pd.merge(valid_data, curr_data, how="outer", on="ID")
-    curr_data = curr_data.sort_values("ID")
-    curr_data["Date"] = Date[date_idx]
+output_df = pd.DataFrame()
+for ID_idx in range(len(member_ID)):
+    curr_id_data = all_data_dict[member_ID[ID_idx]]    
+
+    curr_id_df = pd.DataFrame(index=[member_ID[ID_idx]], columns=Date)
+    for Date_idx in range(len(Date)):         
+        if (curr_id_data.index == Date[Date_idx]).sum() > 0:
+            curr_features = curr_id_data.loc[Date[Date_idx]]
+            curr_id_df[Date[Date_idx]] = [curr_features]
     
-    all_data_dict[Date[date_idx]] = curr_data
+    output_df = pd.concat([output_df, curr_id_df], axis=0)       
+    print("{}/{}".format(ID_idx, len(member_ID)))
 
 print("Dumping data ...")    
 f = open('./Data/all_data.pkl', 'wb')
-pickle.dump(all_data_dict, f, True)  
+#pickle.dump(all_data_dict, f, True)  
 pickle.dump(tasharep_ID, f, True)  
 pickle.dump(Date, f, True)  
+pickle.dump(output_df, f, True)  
 f.close()  
     
 print("========== Preprocess Done! ==========")
