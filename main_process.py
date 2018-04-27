@@ -9,10 +9,11 @@ import pandas as pd
 import pickle
 
 from tqdm import tqdm
+from sklearn.preprocessing import StandardScaler
 
 def change_raw_columns_name(inputfile:pd.DataFrame):
     
-    inputfile.columns = ['ID', 'Date', 'name', 'open_price', 'max', 'min', 'close_price', 'trade']
+    inputfile.columns = ["ID", "Date", "name", "open_price", "max", "min", "close_price", "trade"]
     
 print("========== Preprocess Start ==========")
 
@@ -68,15 +69,22 @@ Date = tasharep.Date.unique()
 tasharep_ID_group = tasharep.groupby("ID")
 taetfp_ID_group = taetfp.groupby("ID")
 
+### Normalize the data
+N = StandardScaler()
+tmp_nor_price = N.fit_transform(tasharep[["open_price", "max", "min", "close_price"]].T)
+tasharep[["open_price", "max", "min", "close_price"]] = tmp_nor_price.T
+tmp_nor_trade = N.fit_transform(tasharep["trade"].reshape(1, -1))
+tasharep["trade"] = tmp_nor_trade.reshape(-1)
+    
 all_data_dict = {}
 for ID_idx in range(len(tasharep_ID)):
     idx = tasharep_ID_group.groups[tasharep_ID[ID_idx]]
 
-    curr_ID_data = tasharep.iloc[idx]
+    curr_ID_data = tasharep.iloc[idx]   
     curr_ID_data.index = curr_ID_data.Date
     
     all_data_dict[tasharep_ID[ID_idx]] = curr_ID_data
-
+    
 ID_pbar = tqdm(range(len(member_ID)))
 output_df = pd.DataFrame()
 for ID_idx in ID_pbar:
