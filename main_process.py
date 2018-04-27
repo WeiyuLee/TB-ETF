@@ -84,12 +84,16 @@ for ID_idx in ID_pbar:
 
     curr_ID_df = pd.DataFrame(index=[member_ID[ID_idx]], columns=Date)
     for Date_idx in range(len(Date)):         
-        if (curr_ID_data.index == Date[Date_idx]).sum() > 0:
+        try:
             curr_features = curr_ID_data.loc[Date[Date_idx]]
             curr_ID_df[Date[Date_idx]] = [curr_features[3:].tolist()]
-    
+        except:
+            continue
+        
     output_df = pd.concat([output_df, curr_ID_df], axis=0)       
     ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
+
+feature_list = ['open_price', 'max', 'min', 'close_price', 'trade']
 
 print("Dumping data ...")    
 f = open('./Data/all_data.pkl', 'wb')
@@ -97,6 +101,7 @@ f = open('./Data/all_data.pkl', 'wb')
 pickle.dump(tasharep_ID, f, True)  
 pickle.dump(member_ID, f, True)  
 pickle.dump(Date, f, True)  
+pickle.dump(feature_list, f, True)  
 pickle.dump(output_df, f, True)  
 f.close()  
     

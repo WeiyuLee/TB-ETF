@@ -17,6 +17,7 @@ f = open('./Data/all_data.pkl', 'rb')
 tasharep_ID = pickle.load(f)
 member_ID = pickle.load(f)
 Date = pickle.load(f)
+_ = pickle.load(f)
 org_data = pickle.load(f)
 
 ID_pbar = tqdm(range(len(member_ID)))
@@ -51,6 +52,17 @@ for ID_idx in ID_pbar:
 
     output_df = pd.concat([output_df, curr_ID_df], axis=0)               
     ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
+
+feature_list = ["SMA_30", "EMA_30", "WMA_30", "DEMA_30", "TEMA_30"]
+
+print("Dumping data ...")    
+f = open('./Data/ta_feature.pkl', 'wb')
+pickle.dump(tasharep_ID, f, True)  
+pickle.dump(member_ID, f, True)  
+pickle.dump(Date, f, True)  
+pickle.dump(feature_list, f, True)  
+pickle.dump(output_df, f, True)  
+f.close()  
     
 print("========== TA Preprocess Done! ==========")    
     
