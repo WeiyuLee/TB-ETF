@@ -18,21 +18,30 @@ tasharep_ID = pickle.load(f)
 member_ID = pickle.load(f)
 Date = pickle.load(f)
 _ = pickle.load(f)
+_ = pickle.load(f)
 org_data = pickle.load(f)
 
 ID_pbar = tqdm(range(len(member_ID)))
 output_df = pd.DataFrame()
 for ID_idx in ID_pbar:
+#for ID_idx in range(1298, len(member_ID)):
     curr_ID_data = org_data.loc[member_ID[ID_idx]]
     
     curr_close_price_seq = []
     for Date_idx in range(len(Date)):
         try:
+#            print("try {}_{}".format(ID_idx, Date[Date_idx]))
+#            print(curr_ID_data[Date[Date_idx]])
             curr_close_price = curr_ID_data[Date[Date_idx]][3]
+#            print(curr_close_price)
         except:
+#            print("except {}_{}".format(ID_idx, Date[Date_idx]))
             curr_close_price = 0
         
         curr_close_price_seq.append(curr_close_price)            
+
+#    print("member_ID[{}] = {}".format(ID_idx, member_ID[ID_idx]))
+#    print(curr_close_price_seq)
             
     curr_close_price_seq = np.array(curr_close_price_seq)
     
