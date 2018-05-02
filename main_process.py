@@ -37,6 +37,12 @@ print('merged tasharep: ',tasharep.shape)
 tasharep.ID = tasharep.ID.astype(str)
 tasharep.Date = tasharep.Date.astype(str)
 
+tasharep["ID"] = tasharep["ID"].astype(str)
+tasharep["ID"] = tasharep["ID"].str.strip()
+
+tasharep["Date"] = tasharep["Date"].astype(str)
+tasharep["Date"] = tasharep["Date"].str.strip()
+
 tasharep["open_price"] = tasharep["open_price"].astype(str)
 tasharep["open_price"] = tasharep["open_price"].str.strip()
 tasharep["open_price"] = tasharep["open_price"].str.replace(",", "")
@@ -113,13 +119,15 @@ for ID_idx in ID_pbar:
 feature_list = ['open_price', 'max', 'min', 'close_price', 'trade']
 
 print("Dumping data ...")    
-f = open('./Data/all_data.pkl', 'wb')
+f = open('./Data/org_meta_data.pkl', 'wb')
 pickle.dump(tasharep_ID, f, True)  
 pickle.dump(member_ID, f, True)  
 pickle.dump(Date, f, True)  
 pickle.dump(feature_list, f, True)  
 pickle.dump(N, f, True)
-pickle.dump(output_df, f, True)  
 f.close()  
+
+output_df.to_pickle('./Data/org_feature_data.pkl')  
+
     
 print("========== Preprocess Done! ==========")
