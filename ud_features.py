@@ -70,4 +70,4 @@ f.close()
 
 output_df.to_pickle("./Data/ud_feature_data.pkl")
     
-print("========== TA Preprocess Done! ==========")   
+print("========== UD Preprocess Done! ==========")   

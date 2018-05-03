@@ -83,10 +83,11 @@ tasharep_ID_group = tasharep.groupby("ID")
 member_ID = tasharep_ID
 
 ### Normalize the data
-N = StandardScaler()
-tmp_nor_price = N.fit_transform(tasharep[["open_price", "max", "min", "close_price"]].T)
+price_scaler = StandardScaler()
+tmp_nor_price = price_scaler.fit_transform(tasharep[["open_price", "max", "min", "close_price"]].T)
 tasharep[["open_price", "max", "min", "close_price"]] = tmp_nor_price.T
-tmp_nor_trade = N.fit_transform(tasharep["trade"].reshape(1, -1))
+trade_scaler = StandardScaler()
+tmp_nor_trade = trade_scaler.fit_transform(tasharep["trade"].values.reshape(-1, 1)) # if only a single sample, use reshape(-1, 1)
 tasharep["trade"] = tmp_nor_trade.reshape(-1)
 
 ### Slice the data by IDs, and make a dict.  
@@ -124,7 +125,8 @@ pickle.dump(tasharep_ID, f, True)
 pickle.dump(member_ID, f, True)  
 pickle.dump(Date, f, True)  
 pickle.dump(feature_list, f, True)  
-pickle.dump(N, f, True)
+pickle.dump(price_scaler, f, True)
+pickle.dump(trade_scaler, f, True)
 f.close()  
 
 output_df.to_pickle('./Data/org_feature_data.pkl')  
