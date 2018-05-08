@@ -152,13 +152,13 @@ if UD_conf["enable"] is True:
 ### Drop nan values
 print("Cleaning data...")
 time_period = max(conf.config('feature_conf').config['MA']["timeperiod"])
-output_df = output_df.drop(output_df.columns[0:(time_period-1)*3], axis=1)
+output_df = output_df.drop(output_df.columns[0:(time_period-1)*6], axis=1)
 Date = output_df.columns.values.tolist()
 
 ### Plot data
-#curr_TS = get_stock_time_series(output_df, "1101")
-#plt.plot(curr_TS[:,3])
-#plt.plot(curr_TS[:,5])
+curr_TS = get_stock_time_series(output_df, "0050")
+plt.plot(curr_TS[:,3])
+plt.plot(curr_TS[:,40])
 
 ### Dump Data   
 print("Dumping data ...")    
