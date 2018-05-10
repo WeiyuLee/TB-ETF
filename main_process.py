@@ -29,6 +29,30 @@ def get_stock_time_series(data_df, stock_id):
         output = np.vstack((output, curr_ID_data[i]))
         
     return output    
+
+def set_stock_time_series(data_df, stock_id, input_TS):
+    
+    for i in range(len(data_df.loc[stock_id].index)):
+        data_df.loc[stock_id][i] = input_TS[i, :]
+        
+    return data_df    
+
+def scale_data(data, is1D=False):
+    
+    dim = data.shape
+
+    if is1D is True:
+        data = data.reshape(-1, 1)
+        
+    N = StandardScaler()
+    scaled_data = N.fit_transform(data)
+
+    if len(dim) > 1:
+        scaled_data = scaled_data.reshape(dim[0], dim[1])
+    else:
+        scaled_data = scaled_data.reshape(-1)
+        
+    return scaled_data, N
     
 print("========== Preprocess Start ==========")
 
@@ -98,16 +122,15 @@ member_ID = member_data["ID"].astype(str)
 member_ID = member_ID.str.strip()
 #member_ID = tasharep_ID
 
-### Normalize the data
+### Normalize the data before ta_preprocess
 Nm_conf = conf.config('feature_conf').config['Nm']
-if Nm_conf["enable"] is True:
-    price_scaler = StandardScaler()
-    tmp_nor_price = price_scaler.fit_transform(tasharep[["open_price", "max", "min", "close_price"]].values.reshape(-1, 1))
-    tasharep[["open_price", "max", "min", "close_price"]] = tmp_nor_price.reshape(-1, 4)
-    trade_scaler = StandardScaler()
-    tmp_nor_trade = trade_scaler.fit_transform(tasharep["trade"].values.reshape(-1, 1)) # if only a single sample, use reshape(-1, 1)
-    tasharep["trade"] = tmp_nor_trade.reshape(-1)
-
+if Nm_conf["enable"] is True and Nm_conf["type"] == [0]:
+    print("Scaling data (before) ...")
+    tmp_nor_price, price_scaler = scale_data(np.array(tasharep[["open_price", "max", "min", "close_price"]]), is1D=True)
+    tasharep[["open_price", "max", "min", "close_price"]] = tmp_nor_price
+    tmp_nor_trade, trade_scaler = scale_data(np.array(tasharep["trade"]), is1D=True)
+    tasharep["trade"] = tmp_nor_trade
+    
 ### Slice the data by IDs, and make a dict.  
 all_data_dict = {}
 for ID_idx in range(len(tasharep_ID)):
@@ -130,7 +153,8 @@ for ID_idx in ID_pbar:
             curr_features = curr_ID_data.loc[Date[Date_idx]]
             curr_ID_df[Date[Date_idx]] = [curr_features[3:].tolist()]
         except:
-            continue
+            curr_ID_df[Date[Date_idx]] = [[np.NAN, np.NAN, np.NAN, np.NAN, np.NAN]]
+            #curr_ID_df[Date[Date_idx]] = [[0, 0, 0, 0, 0]]
         
     output_df = pd.concat([output_df, curr_ID_df], axis=0)       
     ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
@@ -155,10 +179,29 @@ time_period = max(conf.config('feature_conf').config['MA']["timeperiod"])
 output_df = output_df.drop(output_df.columns[0:(time_period-1)*6], axis=1)
 Date = output_df.columns.values.tolist()
 
+### Normalize the data after ta_preprocess
+Nm_conf = conf.config('feature_conf').config['Nm']
+if Nm_conf["enable"] is True and Nm_conf["type"] == [1]:
+    print("Scaling data (after) ...")
+    ID_pbar = tqdm(range(len(member_ID)))
+    for ID_idx in ID_pbar:
+        curr_stock_TS = get_stock_time_series(output_df, member_ID[ID_idx])
+        
+        # scale price
+        curr_stock_TS[:, 0:4], price_scaler = scale_data(curr_stock_TS[:, 0:4], is1D=True)
+        # scale trade
+        curr_stock_TS[:, 4], trade_scaler = scale_data(curr_stock_TS[:, 4], is1D=True)
+        # scale ta features
+        curr_stock_TS[:, 5:-4], ta_scaler = scale_data(curr_stock_TS[:, 5:-4], is1D=False)
+        
+        output_df = set_stock_time_series(output_df, member_ID[ID_idx], curr_stock_TS)
+        
 ### Plot data
 curr_TS = get_stock_time_series(output_df, "0050")
-plt.plot(curr_TS[:,3])
-plt.plot(curr_TS[:,40])
+plt.plot(curr_TS[0:100,3])
+plt.plot(curr_TS[0:100,6])
+plt.plot(curr_TS[0:100,7])
+plt.plot(curr_TS[0:100,8])
 
 ### Dump Data   
 print("Dumping data ...")    
