@@ -5,12 +5,10 @@ Created on Mon Apr 23 15:33:44 2018
 @author: Weiyu_Lee
 """
 import numpy as np
-import pandas as pd
 import talib
+from tqdm import tqdm
 
 import config as conf
-
-from tqdm import tqdm
 
 def ta_MA(MA_conf, curr_close_price_seq):
 
@@ -42,6 +40,42 @@ def ta_HT_TRENDLINE(HT_TRENDLINE_conf, curr_close_price_seq):
 
     return HT_TRENDLINE_seqs, curr_feature_list
 
+def ta_MIDPOINT(MIDPOINT_conf, curr_close_price_seq):
+
+    MIDPOINT_seqs = []
+    curr_feature_list = []
+    
+    MIDPOINT_period_num = len(MIDPOINT_conf["period"])
+    
+    for i in range(MIDPOINT_period_num):
+        curr_period = MIDPOINT_conf["period"][0]
+        
+        curr_feature_list.append("MIDPOINT_" + str(curr_period))
+        
+        curr_MIDPOINT_seq = talib.MIDPOINT(curr_close_price_seq, timeperiod=curr_period) 
+        
+        MIDPOINT_seqs.append(curr_MIDPOINT_seq.copy())
+
+    return MIDPOINT_seqs, curr_feature_list
+
+def ta_MIDPRICE(MIDPRICE_conf, curr_high_price_seq, curr_low_price_seq):
+
+    MIDPRICE_seqs = []
+    curr_feature_list = []
+    
+    MIDPRICE_period_num = len(MIDPRICE_conf["period"])
+    
+    for i in range(MIDPRICE_period_num):
+        curr_period = MIDPRICE_conf["period"][0]
+        
+        curr_feature_list.append("MIDPRICE_" + str(curr_period))
+        
+        curr_MIDPRICE_seq = talib.MIDPRICE(curr_high_price_seq, curr_low_price_seq, timeperiod=curr_period) 
+
+        MIDPRICE_seqs.append(curr_MIDPRICE_seq.copy())
+
+    return MIDPRICE_seqs, curr_feature_list
+
 def ta_CCI(CCI_conf, curr_high_price_seq, curr_low_price_seq, curr_close_price_seq):
 
     CCI_seqs = []
@@ -54,9 +88,9 @@ def ta_CCI(CCI_conf, curr_high_price_seq, curr_low_price_seq, curr_close_price_s
         
         curr_feature_list.append("CCI_" + str(curr_period))
         
-        curr_CCI = talib.CCI(curr_high_price_seq, curr_low_price_seq, curr_close_price_seq, timeperiod=curr_period) 
-
-        CCI_seqs.append(curr_CCI.copy())
+        curr_CCI_seq = talib.CCI(curr_high_price_seq, curr_low_price_seq, curr_close_price_seq, timeperiod=curr_period) 
+        
+        CCI_seqs.append(curr_CCI_seq.copy())
 
     return CCI_seqs, curr_feature_list
 
@@ -79,7 +113,8 @@ def ta_MACD(MACD_conf, curr_close_price_seq):
         curr_MACD, curr_signal, curr_hist = talib.MACD(curr_close_price_seq, 
                                                        fastperiod=curr_fast_period, 
                                                        slowperiod=curr_slow_period, 
-                                                       signalperiod=curr_signal_period)
+                                                       signalperiod=curr_signal_period)      
+        
         MACD_seqs.append([curr_MACD.copy(), curr_signal.copy(), curr_hist.copy()])
     
     return MACD_seqs, curr_feature_list
@@ -92,7 +127,7 @@ def ta_RSI(RSI_conf, curr_close_price_seq):
     RSI_period_num = len(RSI_conf["period"])
     
     for i in range(RSI_period_num):
-        curr_period = RSI_conf["period"][0]
+        curr_period = RSI_conf["period"][i]
         
         curr_feature_list.append("RSI_" + str(curr_period))
         
@@ -224,7 +259,7 @@ def ta_NATR(NATR_conf, curr_high_price_seq, curr_low_price_seq, curr_close_price
         
     return NATR_seqs, curr_feature_list
 
-def ta_preprocess(tasharep_ID, member_ID, Date, org_data):
+def ta_preprocess(member_ID, Date, org_data):
     
     print("========== TA Preprocess Start ==========")
     
@@ -279,6 +314,18 @@ def ta_preprocess(tasharep_ID, member_ID, Date, org_data):
             if HT_TRENDLINE_conf["enable"] is True:        
                 HT_TRENDLINE_seqs, HT_TRENDLINE_feature_list = ta_HT_TRENDLINE(HT_TRENDLINE_conf, curr_close_price_seq)                
                 if ID_idx == 0: feature_list.extend(HT_TRENDLINE_feature_list)                            
+
+            # MidPoint over period
+            MIDPOINT_conf = conf.config('feature_conf').config['MIDPOINT']
+            if MIDPOINT_conf["enable"] is True:        
+                MIDPOINT_seqs, MIDPOINT_feature_list = ta_MIDPOINT(MIDPOINT_conf, curr_close_price_seq)
+                if ID_idx == 0: feature_list.extend(MIDPOINT_feature_list)               
+
+            # Midpoint Price over period
+            MIDPRICE_conf = conf.config('feature_conf').config['MIDPRICE']
+            if MIDPRICE_conf["enable"] is True:        
+                MIDPRICE_seqs, MIDPRICE_feature_list = ta_MIDPRICE(MIDPRICE_conf, curr_high_price_seq, curr_low_price_seq)
+                if ID_idx == 0: feature_list.extend(MIDPRICE_feature_list)               
 
             ######################### Momentum Indicators #########################
 
@@ -364,6 +411,14 @@ def ta_preprocess(tasharep_ID, member_ID, Date, org_data):
 
                 if HT_TRENDLINE_conf["enable"] is True:        
                     temp_ta_features.append(HT_TRENDLINE_seqs[Date_idx])
+
+                if MIDPOINT_conf["enable"] is True:        
+                    for i in range(len(MIDPOINT_conf["period"])):
+                        temp_ta_features.append(MIDPOINT_seqs[i][Date_idx])    
+
+                if MIDPRICE_conf["enable"] is True:        
+                    for i in range(len(MIDPRICE_conf["period"])):
+                        temp_ta_features.append(MIDPRICE_seqs[i][Date_idx])                            
 
                 if CCI_conf["enable"] is True:        
                     for i in range(len(CCI_conf["period"])):

@@ -12,12 +12,20 @@ class config:
         self.configuration = configuration
         self.config = {
         				  "Nm":{},            # Normalization
+
         				  "UD":{},            # Up, down features
+        				  "LT":{},            # Long term features                          
+                    "STOCKS":{},        # Other Stocks's price & trade
+                    "EXCH":{},          # Exchange rate
+                    "TAIEX":{},         # The Weighted Price Index of the Taiwan Stock Exchange                     
                     "TA":{},            # TA features
+                    "PATTERN":{},       # Pattern Recognition
                     
                     # Overlap Studies
                     "MA":{},            # Moving Average
-                    "HT_TRENDLINE":{},  # Moving Average
+                    "HT_TRENDLINE":{},  # Hilbert Transform - Instantaneous Trendline
+                    "MIDPOINT":{},      # MidPoint over period
+                    "MIDPRICE":{},      # Midpoint Price over period
                     
                     # Momentum Indicators
                     "CCI":{},           # Commodity Channel Index
@@ -57,16 +65,52 @@ class config:
         # type: 0=before ta_preprocess, 1=after ta_preprocess
         Nm_conf = self.config['Nm']   
         Nm_conf["enable"] = True
-        Nm_conf["type"] = [0]
+        Nm_conf["ratio_enable"] = False
+        Nm_conf["type"] = [1]
+        Nm_conf["method"] = "Standard"
         
         # Up down
         UD_conf = self.config['UD']   
         UD_conf["enable"] = True
-        
+
+        # Long term features                          
+        LT_conf = self.config['LT']   
+        LT_conf["enable"] = True
+
+        # Other Stocks's price & trade
+        STOCKS_conf = self.config['STOCKS']   
+        STOCKS_conf["enable"] = False
+        STOCKS_conf["stocks"] = ["2330", "2317"]
+
+        # Exchange rate
+        EXCH_conf = self.config['EXCH']   
+        EXCH_conf["enable"] = True
+        EXCH_conf["Nm"] = True
+        if EXCH_conf["Nm"] is True:
+            EXCH_conf["file_path"] = "./Data/exchange_rate_data_Nm.pkl"
+        else:
+            EXCH_conf["file_path"] = "./Data/exchange_rate_data_woNm.pkl"
+            
+        # The Weighted Price Index of the Taiwan Stock Exchange    
+        TAIEX_conf = self.config['TAIEX']   
+        TAIEX_conf["enable"] = True
+        TAIEX_conf["Nm"] = True
+        if TAIEX_conf["Nm"] is True:
+            TAIEX_conf["file_path"] = "./Data/taiex_data_Nm.pkl"
+        else:
+            TAIEX_conf["file_path"] = "./Data/taiex_data_woNm.pkl"
+            
         ### TA
         # If TA_conf["enable"] is False, none of the TA features adds to the list.
         TA_conf = self.config['TA']   
         TA_conf["enable"] = True
+        TA_conf["Nm"] = True
+
+        ### Pattern Recognition
+        # If PATTERN_conf["enable"] is False, none of the Pattern features adds to the list.
+        PATTERN_conf = self.config['PATTERN']   
+        PATTERN_conf["enable"] = True
+        PATTERN_conf["Nm"] = False
 
         #######################################################################
         ########################### Overlap Studies ###########################
@@ -77,11 +121,21 @@ class config:
         MA_conf = self.config['MA']   
         MA_conf["enable"] = True
         MA_conf["MA_Type"] = [0, 1, 2, 3, 4, 5, 6, 7, 8]       
-        MA_conf["timeperiod"] = [5, 13, 26, 52]
+        MA_conf["timeperiod"] = [3, 5, 13, 26, 52]
         
         # Hilbert Transform - Instantaneous Trendline
         HT_TRENDLINE_conf = self.config['HT_TRENDLINE']   
         HT_TRENDLINE_conf["enable"] = True                 
+
+        # MidPoint over period
+        MIDPOINT_conf = self.config['MIDPOINT']   
+        MIDPOINT_conf["enable"] = True
+        MIDPOINT_conf["period"] = [14]             
+        
+        # Midpoint Price over period
+        MIDPRICE_conf = self.config['MIDPRICE']   
+        MIDPRICE_conf["enable"] = True
+        MIDPRICE_conf["period"] = [14]    
 
         #######################################################################
         ######################### Momentum Indicators #########################
@@ -96,18 +150,18 @@ class config:
         # period: [fastperiod, slowperiod, signalperiod]
         MACD_conf = self.config['MACD']   
         MACD_conf["enable"] = True
-        MACD_conf["period"] = [[12, 26, 9]]              
+        MACD_conf["period"] = [[12, 26, 9], [5, 30, 3], [8, 13, 9]]              
 
         # Relative Strength Index
         RSI_conf = self.config['RSI']   
         RSI_conf["enable"] = True
-        RSI_conf["period"] = [14]              
+        RSI_conf["period"] = [14, 28, 42]              
 
         # Stochastic (STOCH) KDJ
         # period: [fastk_period, slowk_period, slowd_period]
         KDJ_conf = self.config['KDJ']   
         KDJ_conf["enable"] = True
-        KDJ_conf["period"] = [[9, 9, 3]]              
+        KDJ_conf["period"] = [[9, 9, 3], [3, 2, 2]]              
        
         #######################################################################
         ########################## Volume Indicators ##########################
@@ -145,12 +199,12 @@ class config:
         
         # Average True Range
         ATR_conf = self.config['ATR']   
-        ATR_conf["period"] = [14]              
+        ATR_conf["period"] = [14, 28, 42]              
         ATR_conf["enable"] = True         
         
         # Normalized Average True Range
         NATR_conf = self.config['NATR']   
-        NATR_conf["period"] = [14]              
+        NATR_conf["period"] = [14, 28, 42]              
         NATR_conf["enable"] = True                 
         
         

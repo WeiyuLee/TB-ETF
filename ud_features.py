@@ -12,7 +12,7 @@ import config as conf
 
 from tqdm import tqdm
 
-def ud_preprocess(tasharep_ID, member_ID, Date, org_data):
+def ud_preprocess(member_ID, Date, org_data):
     
     print("========== UD Preprocess Start ==========")
     
@@ -21,9 +21,12 @@ def ud_preprocess(tasharep_ID, member_ID, Date, org_data):
         
         print("UD features are disabled.")
     else:
-        ID_pbar = tqdm(range(len(member_ID)))
-
+        ID_pbar = tqdm(range(len(member_ID)))        
         for ID_idx in ID_pbar:
+            up_count = 0
+            eq_count = 0
+            down_count = 0
+            
             curr_ID_data = org_data.loc[member_ID[ID_idx]]
             
             curr_close_price_seq = []
@@ -37,24 +40,29 @@ def ud_preprocess(tasharep_ID, member_ID, Date, org_data):
                    
             curr_close_price_seq_shift = curr_close_price_seq.copy()        
             del curr_close_price_seq_shift[0]    
-            curr_close_price_seq_shift.insert(-1, 0)        
+            curr_close_price_seq_shift.append(0)
         
             curr_close_price_seq = np.array(curr_close_price_seq)  
             curr_close_price_seq_shift = np.array(curr_close_price_seq_shift)  
             
             diff = curr_close_price_seq_shift - curr_close_price_seq
             
-            curr_ID_df = pd.DataFrame(index=[member_ID[ID_idx]], columns=Date)
-            for Date_idx in range(len(Date)):
+            org_data.loc[member_ID[ID_idx]][Date[0]] = np.append(org_data.loc[member_ID[ID_idx]][Date[0]], [0,1,0])
+            for Date_idx in range(len(Date)-1):
                 if diff[Date_idx] > 0:
                     encode = [0,0,1]
+                    up_count += 1
                 elif diff[Date_idx] == 0:
                     encode = [0,1,0]
+                    eq_count += 1
                 elif diff[Date_idx] < 0:    
                     encode = [1,0,0]
+                    down_count += 1
                     
-                org_data.loc[member_ID[ID_idx]][Date[Date_idx]].extend(encode)
-                
+                #org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]].extend(encode)
+                org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]] = np.append(org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]], encode)
+            
+            print("\n{}: [{}, {}, {}]".format(member_ID[ID_idx], up_count, eq_count, down_count))
             ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
         
         feature_list = ["UD_0", "UD_1", "UD_2"]
