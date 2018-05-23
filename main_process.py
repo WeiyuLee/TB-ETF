@@ -56,6 +56,9 @@ tasharep = pd.concat([tasharep, taetfp], axis=0)
 tasharep.reset_index(drop=True, inplace=True)
 print('merged tasharep: ',tasharep.shape)
 
+# Define standard unit features
+unit_f_list = ['open_price', 'max', 'min', 'close_price', 'trade']
+
 ### Remove the unnecessary comma or space and transform to float
 tasharep.ID = tasharep.ID.astype(str)
 tasharep.Date = tasharep.Date.astype(str)
@@ -101,9 +104,16 @@ Date = tasharep.Date.unique()
 tasharep_ID_group = tasharep.groupby("ID")
 
 ### Load target IDs
-member_data = pd.read_csv('./Data/0050_ratio.csv', dtype=str) 
+ID_conf = conf.config('feature_conf').config['ID']
+ETF_ID = ID_conf["ID"]
+member_data = pd.read_csv("./Data/ETF_member/" + ETF_ID + "_ratio.csv", dtype=str) 
 member_ID = member_data["ID"].astype(str)
 member_ID = member_ID.str.strip()
+
+# 2311 2325 2633
+#member_ID = member_ID.drop(index=9) # 2633
+#member_ID.index = member_ID.reset_index().index
+
 #member_ID = tasharep_ID
 
 ###############################################################################
@@ -132,7 +142,12 @@ print("========== Making Dataframe ==========")
 ID_pbar = tqdm(range(len(member_ID)))
 output_df = pd.DataFrame()
 for ID_idx in ID_pbar:
-    curr_ID_data = all_data_dict[member_ID[ID_idx]]    
+    try:
+        curr_ID_data = all_data_dict[member_ID[ID_idx]]    
+    except:
+        print("\nmember_ID[{}] = {} not found.".format(ID_idx, member_ID[ID_idx]))
+        member_ID = member_ID.drop(index=ID_idx)
+        continue
 
     curr_ID_df = pd.DataFrame(index=[member_ID[ID_idx]], columns=Date)
     for Date_idx in range(len(Date)):         
@@ -145,6 +160,8 @@ for ID_idx in ID_pbar:
         
     output_df = pd.concat([output_df, curr_ID_df], axis=0)       
     ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
+
+member_ID.index = member_ID.reset_index().index
 
 feature_list = ['open_price', 'max', 'min', 'close_price', 'trade']
 
@@ -165,12 +182,6 @@ PATTERN_conf = conf.config('feature_conf').config['PATTERN']
 if PATTERN_conf["enable"] is True:
     output_df, pattern_feature_list = pa.pattern_preprocess(member_ID, Date, output_df)
     feature_list.extend(pattern_feature_list)
-
-### Calculate LT features
-LT_conf = conf.config('feature_conf').config['LT']
-if LT_conf["enable"] is True:
-    output_df, lt_feature_list = lt.lt_preprocess(member_ID, Date, output_df)
-    feature_list.extend(lt_feature_list)
 
 ### Concat exchange rate
 EXCH_conf = conf.config('feature_conf').config['EXCH']
@@ -202,7 +213,6 @@ if STOCKS_conf["enable"] is True:
     print("========== Concat Other Stocks Data ==========")
     stock_list = STOCKS_conf["stocks"]
     curr_target_TS = get_stock_time_series(output_df, "0050")
-    unit_f_list = ['open_price', 'max', 'min', 'close_price', 'trade']
     
     for ID in stock_list:
         curr_member_TS = get_stock_time_series(output_df, ID)        
@@ -229,32 +239,43 @@ if STOCKS_conf["enable"] is True:
 #member_ID = member_ID.drop(columns="index")
 #member_ID = member_ID.squeeze()
 
-### Calculate UD features
-UD_conf = conf.config('feature_conf').config['UD']
-if UD_conf["enable"] is True:
-    output_df, ud_feature_list = ud.ud_preprocess(member_ID, Date, output_df)
-    feature_list.extend(ud_feature_list)
-
 ###############################################################################
 ### Normalize the data after ta_preprocess
 Nm_conf = conf.config('feature_conf').config['Nm']
 if Nm_conf["enable"] is True and Nm_conf["type"] == [1]:
     Nm_method = Nm_conf["method"]
+    price_scaler = {}
+    trade_scaler = {}
     ID_pbar = tqdm(range(len(member_ID)))
     for ID_idx in ID_pbar:
         curr_stock_TS = get_stock_time_series(output_df, member_ID[ID_idx])
         
         curr_stock_TS, scaler = nm.nm_preprocess(curr_stock_TS, feature_list)
         
-        if member_ID[ID_idx] == "0050":
-            price_scaler = scaler["price"]
-            trade_scaler = scaler["trade"]
+        if ID_idx == 0:
+            for f_list in unit_f_list:
+                feature_list.append(f_list + "_ratio")
+                
+        price_scaler[member_ID[ID_idx]] = scaler["price"]
+        trade_scaler[member_ID[ID_idx]] = scaler["trade"]
                
         output_df = set_stock_time_series(output_df, member_ID[ID_idx], curr_stock_TS)
 ###############################################################################
+
+### Calculate LT features
+LT_conf = conf.config('feature_conf').config['LT']
+if LT_conf["enable"] is True:
+    output_df, lt_feature_list = lt.lt_preprocess(member_ID, Date, output_df)
+    feature_list.extend(lt_feature_list)
+
+### Calculate UD features
+UD_conf = conf.config('feature_conf').config['UD']
+if UD_conf["enable"] is True:
+    output_df, ud_feature_list = ud.ud_preprocess(member_ID, Date, output_df)
+    feature_list.extend(ud_feature_list)
         
 ### Plot data
-curr_TS = get_stock_time_series(output_df, "0050")
+curr_TS = get_stock_time_series(output_df, ETF_ID)
 curr_UD_shift = curr_TS[:, -3:]
 curr_UD_shift = np.delete(curr_UD_shift, 0, axis=0)
 curr_TS[:, -3:] = np.insert(curr_UD_shift, -1, curr_UD_shift[-1,:], axis=0)
@@ -264,9 +285,9 @@ tmp_corr_mat = np.abs(tmp_df.corr())
 tmp_corr_mat.index = feature_list
 tmp_corr_mat.columns = feature_list
 
-plt.plot(curr_TS[100:200,3])
-plt.plot(curr_TS[100:200,81])
-plt.plot(curr_TS[100:200,82])
+#plt.plot(curr_TS[100:200,3])
+#plt.plot(curr_TS[100:200,97])
+#plt.plot(curr_TS[100:200,98])
 #plt.plot(curr_TS[100:200,82])
 #plt.plot(curr_TS[100:200,83])
 #plt.plot(curr_TS[100:200,4])
@@ -278,7 +299,7 @@ plt.plot(curr_TS[100:200,82])
 ### Dump Data   
 print("Dumping data ...")    
 if Nm_conf["enable"] is True:
-    file_postfix = '_Nm_' + str(Nm_conf["type"][0]) + '_' + Nm_method + '_' + str(len(feature_list)) + '.pkl'
+    file_postfix = '_Nm_' + str(Nm_conf["type"][0]) + '_' + Nm_method + '_' + str(len(feature_list)) + "_" + ETF_ID + '.pkl'
 else:
     file_postfix = "_" + str(len(feature_list)) + '.pkl'
 f = open('./Data/all_meta_data' + file_postfix, 'wb')

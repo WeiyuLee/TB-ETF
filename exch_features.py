@@ -41,10 +41,12 @@ exchange_rate = exchange_rate.drop(columns="exch_NZD/USD")
 
 # Scale the features
 if EXCH_conf["Nm"] is True:
+    Nm_conf = conf.config('feature_conf').config['Nm']
+    Nm_method = Nm_conf["method"]    
     feature_list = exchange_rate.columns.tolist()
     for f in feature_list:
         curr_feature = exchange_rate[f]
-        exchange_rate[f], _ = nm.nm_scale_data(curr_feature, method="Standard", is1D=True)    
+        exchange_rate[f], _ = nm.nm_scale_data(curr_feature, method=Nm_method, is1D=True)    
     file_postfix = "_Nm"
 else:
     file_postfix = "_woNm"

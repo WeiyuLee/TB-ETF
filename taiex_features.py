@@ -37,8 +37,10 @@ taiex = taiex.drop(columns="Date")
 
 # Scale the features
 if TAIEX_conf["Nm"] is True:   
+    Nm_conf = conf.config('feature_conf').config['Nm']
+    Nm_method = Nm_conf["method"]        
     feature_list = taiex.columns.tolist()
-    taiex.iloc[:,:], _ = nm.nm_scale_data(taiex.values, method="Standard", is1D=True)    
+    taiex.iloc[:,:], _ = nm.nm_scale_data(taiex.values, method=Nm_method, is1D=True)    
     file_postfix = "_Nm"
 else:
     file_postfix = "_woNm"

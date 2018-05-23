@@ -20,9 +20,10 @@ def nm_transfer_to_ratio(data):
     data_shift = np.delete(data_shift, -1)
     data_shift = data_shift.reshape(-1, 1)
     
-    data_ratio = data / data_shift
+    # data_ratio = t / (t - 1)
+    data_ratio = (data / data_shift) - 1
     
-    data_ratio = data_ratio.reshape(-1)
+    #data_ratio = data_ratio.reshape(-1)
     
     return data_ratio
 
@@ -38,7 +39,20 @@ def nm_scale_data(data, method="Standard", is1D=False):
     elif method is "MinMax":        
         N = preprocessing.MinMaxScaler()
 
-    scaled_data = N.fit_transform(data)
+    isnan = np.isnan(data).any()
+    if isnan == True:
+        nan_idx =  np.argwhere(np.isnan(data))
+        start_idx = nan_idx[-1][0] + 1
+        
+        # If all the data is NaN, return NaN without scaling.
+        if start_idx == len(data):
+            scaled_data = data
+        else:
+            non_nan_data = data[start_idx:]
+            scaled_data = N.fit_transform(non_nan_data)
+            scaled_data = np.append(data[:start_idx], scaled_data) 
+    else:
+        scaled_data = N.fit_transform(data)
 
     if len(dim) > 1:
         scaled_data = scaled_data.reshape(dim[0], dim[1])
@@ -53,22 +67,25 @@ def nm_preprocess(curr_stock_TS, feature_list):
     print("\nScaling all the data ... ratio: [{}], type: [{}], method: [{}]".format(Nm_conf["ratio_enable"], Nm_conf["type"], Nm_conf["method"]))
     
     if Nm_conf["ratio_enable"] is True:
-#        for f_idx in range(len(feature_list)):
         for f_idx in range(5):        
+            # avoid divide zero
             zero_idx = np.where(curr_stock_TS[:, f_idx] == 0)[0]
             if len(zero_idx) > 0:
                 curr_stock_TS[:, f_idx][zero_idx] = 1
-                
-            curr_stock_TS[:, f_idx] = nm_transfer_to_ratio(curr_stock_TS[:, f_idx])
+                            
+            # Add ratio features 
+            curr_ratio = nm_transfer_to_ratio(curr_stock_TS[:, f_idx])
+            curr_stock_TS = np.append(curr_stock_TS, curr_ratio, axis=1)
     
     scaler = {}
+    Nm_method = Nm_conf["method"]
     
     # Scale price
-    curr_stock_TS[:, 0:4], price_scaler = nm_scale_data(curr_stock_TS[:, 0:4], is1D=True)
+    curr_stock_TS[:, 0:4], price_scaler = nm_scale_data(curr_stock_TS[:, 0:4], method=Nm_method, is1D=True)
     scaler["price"] = price_scaler
     
     # Scale trade
-    curr_stock_TS[:, 4], trade_scaler = nm_scale_data(curr_stock_TS[:, 4], is1D=True)
+    curr_stock_TS[:, 4], trade_scaler = nm_scale_data(curr_stock_TS[:, 4], method=Nm_method, is1D=True)
     scaler["trade"] = trade_scaler
     
     special_list = ["MACD", "KDJ", "ADOSC", "UD", "taiex", "exch", "pa"]
@@ -85,7 +102,7 @@ def nm_preprocess(curr_stock_TS, feature_list):
                 continue
             else:
                 f_idx = feature_list.index(curr_feature)
-                curr_stock_TS[:, f_idx], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx], is1D=True)
+                curr_stock_TS[:, f_idx], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx], method=Nm_method, is1D=True)
                 scaler[curr_feature] = tmp_scaler
             
         # Scale single ta_features with multiple columns
@@ -101,7 +118,7 @@ def nm_preprocess(curr_stock_TS, feature_list):
                 curr_MACD_fast_str = "MACD_" + str(curr_fast_period) + "_" + str(curr_slow_period) + "_" + str(curr_signal_period) + "_fast"
                 
                 f_idx = feature_list.index(curr_MACD_fast_str)
-                curr_stock_TS[:, f_idx:f_idx+3], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx:f_idx+3], is1D=True)
+                curr_stock_TS[:, f_idx:f_idx+3], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx:f_idx+3], method=Nm_method, is1D=True)
                 scaler[curr_MACD_fast_str] = tmp_scaler
                 
         KDJ_conf = conf.config('feature_conf').config['KDJ']
@@ -116,7 +133,7 @@ def nm_preprocess(curr_stock_TS, feature_list):
                 curr_KDJ_slowk_str = "KDJ_" + str(curr_fastk_period) + "_" + str(curr_slowk_period) + "_" + str(curr_slowd_period) + "_slowk"
                 
                 f_idx = feature_list.index(curr_KDJ_slowk_str)
-                curr_stock_TS[:, f_idx:f_idx+3], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx:f_idx+3], is1D=True)            
+                curr_stock_TS[:, f_idx:f_idx+2], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx:f_idx+2], method=Nm_method, is1D=True)            
                 scaler[curr_KDJ_slowk_str] = tmp_scaler
                 
         ADOSC_conf = conf.config('feature_conf').config['ADOSC']
@@ -130,7 +147,7 @@ def nm_preprocess(curr_stock_TS, feature_list):
                 curr_ADOSC_fast_str = "ADOSC_" + str(curr_fast_period) + "_" + str(curr_slow_period)
                 
                 f_idx = feature_list.index(curr_ADOSC_fast_str)
-                curr_stock_TS[:, f_idx:f_idx+3], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx:f_idx+3], is1D=True)                        
+                curr_stock_TS[:, f_idx], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx], method=Nm_method, is1D=True)                        
                 scaler[curr_ADOSC_fast_str] = tmp_scaler
 
     PATTERN_conf = conf.config('feature_conf').config['PATTERN']
@@ -142,7 +159,7 @@ def nm_preprocess(curr_stock_TS, feature_list):
             
             if curr_type is "pa":
                 f_idx = feature_list.index(curr_feature)
-                curr_stock_TS[:, f_idx], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx], is1D=True)
+                curr_stock_TS[:, f_idx], tmp_scaler = nm_scale_data(curr_stock_TS[:, f_idx], method=Nm_method, is1D=True)
                 scaler[curr_feature] = tmp_scaler
                 
     return curr_stock_TS, scaler

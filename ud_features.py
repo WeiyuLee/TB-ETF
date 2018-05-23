@@ -20,12 +20,13 @@ def ud_preprocess(member_ID, Date, org_data):
     if UD_conf["enable"] is False:
         
         print("UD features are disabled.")
-    else:
+    else:       
         ID_pbar = tqdm(range(len(member_ID)))        
         for ID_idx in ID_pbar:
             up_count = 0
             eq_count = 0
             down_count = 0
+            nan_count = 0
             
             curr_ID_data = org_data.loc[member_ID[ID_idx]]
             
@@ -58,11 +59,14 @@ def ud_preprocess(member_ID, Date, org_data):
                 elif diff[Date_idx] < 0:    
                     encode = [1,0,0]
                     down_count += 1
+                else:
+                    encode = [0,0,0]
+                    nan_count += 1
                     
                 #org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]].extend(encode)
                 org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]] = np.append(org_data.loc[member_ID[ID_idx]][Date[Date_idx+1]], encode)
             
-            print("\n{}: [{}, {}, {}]".format(member_ID[ID_idx], up_count, eq_count, down_count))
+            print("\n{}: [{}, {}, {}], nan: [{}]".format(member_ID[ID_idx], up_count, eq_count, down_count, nan_count))
             ID_pbar.set_description("Process: {}/{}".format(ID_idx+1, len(member_ID)))
         
         feature_list = ["UD_0", "UD_1", "UD_2"]

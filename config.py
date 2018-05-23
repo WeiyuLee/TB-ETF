@@ -11,6 +11,8 @@ class config:
 		
         self.configuration = configuration
         self.config = {
+                    "ID":{},            # Target ETF ID
+                
         				  "Nm":{},            # Normalization
 
         				  "UD":{},            # Up, down features
@@ -61,13 +63,18 @@ class config:
             
     def feature_conf(self):
 
+        # Target ETF ID
+        ID_conf = self.config['ID']   
+        ID_conf["ID"] = "0052"
+        
         # Normalization
         # type: 0=before ta_preprocess, 1=after ta_preprocess
         Nm_conf = self.config['Nm']   
         Nm_conf["enable"] = True
-        Nm_conf["ratio_enable"] = False
+        Nm_conf["ratio_enable"] = True
         Nm_conf["type"] = [1]
-        Nm_conf["method"] = "Standard"
+#        Nm_conf["method"] = "Standard"
+        Nm_conf["method"] = "MinMax"
         
         # Up down
         UD_conf = self.config['UD']   
@@ -84,7 +91,7 @@ class config:
 
         # Exchange rate
         EXCH_conf = self.config['EXCH']   
-        EXCH_conf["enable"] = True
+        EXCH_conf["enable"] = False
         EXCH_conf["Nm"] = True
         if EXCH_conf["Nm"] is True:
             EXCH_conf["file_path"] = "./Data/exchange_rate_data_Nm.pkl"
@@ -93,7 +100,7 @@ class config:
             
         # The Weighted Price Index of the Taiwan Stock Exchange    
         TAIEX_conf = self.config['TAIEX']   
-        TAIEX_conf["enable"] = True
+        TAIEX_conf["enable"] = False
         TAIEX_conf["Nm"] = True
         if TAIEX_conf["Nm"] is True:
             TAIEX_conf["file_path"] = "./Data/taiex_data_Nm.pkl"
@@ -109,7 +116,7 @@ class config:
         ### Pattern Recognition
         # If PATTERN_conf["enable"] is False, none of the Pattern features adds to the list.
         PATTERN_conf = self.config['PATTERN']   
-        PATTERN_conf["enable"] = True
+        PATTERN_conf["enable"] = False
         PATTERN_conf["Nm"] = False
 
         #######################################################################
